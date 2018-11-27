@@ -21,6 +21,13 @@ typedef struct{
   float rotulotest;
 }tOrdenar;
 ////------------------------
+// char* mudaNome(int n){
+//   char buffer[4];
+//
+//
+//
+// }
+
 int comparator(const void *a,const void *b){
   tOrdenar* a1 = (tOrdenar *) a;
   tOrdenar* b1 = (tOrdenar *) b;
@@ -144,6 +151,7 @@ char buffer[9002];
 
 //------------------------------------------------------------------------------
 tdados leConfig(FILE *f, float **matrizTreino, float **matrizTeste, int numCol, int linhaTreino, int linhaTeste,float *rotulosTreino,float *rotulosTeste){
+  int contador = 0;
   tdados dados;
   int K;
   int **matrizConfusao;
@@ -157,16 +165,19 @@ tdados leConfig(FILE *f, float **matrizTreino, float **matrizTeste, int numCol, 
 
   float distancia = 0;
 
-printf("Nrotulos: %d\n",(int)numrotulos );
   matrizConfusao =  (int **) malloc(sizeof (int *) * (int)numrotulos);
   for (int i = 0; i < (int)numrotulos; i++){
     matrizConfusao[i] = (int *) calloc((int)numrotulos , sizeof(int));
   }
 
-
   while(fscanf(f, "%d, %c",&K, &tipoDist) != EOF){
-
-    if (tipoDist == 'M'){
+    contador++;
+    for (int i = 0; i < (int)numrotulos; i++) {
+      for (int j = 0; j < (int)numrotulos; j++) {
+        matrizConfusao[i][j]=0;
+      }
+    }
+    if (tipoDist == 'M'){          // MINKOWSKY -----------------------------------------------
       fscanf(f, ", %f", &R);
        for (int j = 0; j < linhaTeste; j++){
        for (int k = 0; k < linhaTreino; k++){
@@ -177,11 +188,11 @@ printf("Nrotulos: %d\n",(int)numrotulos );
            vetorDist[j][k].dist = distancia;
            vetorDist[j][k].rotulotrein = rotulosTreino[k];
            vetorDist[j][k].rotulotest = rotulosTeste[j];
-           //printf("linha: %d x %d -- %f\n",j,k,vetorDist[j][k].dist);
+           //printf("linha: %d x %d -- %f\n",j,k,vetorDist[j][k].dist);     // Print das distâncias linha por linha
            distancia = 0;
          }
        }
-       float respRotulos[linhaTeste];
+       float respRotulos[linhaTeste];        // ORGANIZA VETOR ----------------------------------
        for (int i = 0; i < linhaTeste; i++) {
          int counts[10] = {0};
 
@@ -192,18 +203,12 @@ printf("Nrotulos: %d\n",(int)numrotulos );
          respRotulos[i] = maior(counts,10);
          // printf("Rot Mink : %d\n", (int)respRotulos[i] - 1);
        }
-
-
-         for(int j = 0; j < linhaTeste;j++){
+         for(int j = 0; j < linhaTeste;j++){ // ARMAZENA MATRIZ -------------------------------
            // printf("A:%d  B:%d\n",(int)respRotulos[j],(int)rotulosTeste[j] );
           matrizConfusao[(int)respRotulos[j] - 1][(int)rotulosTeste[j] - 1]++;
-
          }
 
-
-
-
-       float cont = 0;
+       float cont = 0;                     // ACURÁCIA -----------------------------------------
        float accuracy;
        for(int i = 0;i < linhaTeste; i++){
          if(respRotulos[i] == rotulosTeste[i]){
@@ -211,23 +216,24 @@ printf("Nrotulos: %d\n",(int)numrotulos );
          }
        }
        accuracy=cont/linhaTeste;
-
-
-       printf("%.2f\n",accuracy);
-       printf("\n");
+       char arquivoNome[200];
+       sprintf(arquivoNome, "resultados_%d.txt", contador);
+       FILE *arquivo = fopen(arquivoNome, "w");
+       fprintf(arquivo,"%.2f\n\n",accuracy);         // PRINTFS --------------------------------------------
        for(int i= 0 ;i<(int)numrotulos;i++){
          for(int j=0; j<(int)numrotulos;j++){
-           printf("%d ",matrizConfusao[i][j]);
+           fprintf(arquivo,"%d ",matrizConfusao[i][j]);
          }
-         printf("\n" );
+         fprintf(arquivo,"\n");
        }
-       printf("\n");
+       fprintf(arquivo,"\n");
        for (int i = 0; i < linhaTeste; i++){
-         printf("Rot Mink : %d\n", (int)respRotulos[i] - 1);
+         fprintf(arquivo,"%d\n", (int)respRotulos[i] - 1);
        }
+       fclose(arquivo);
     }
 
-    if (tipoDist == 'C'){
+    if (tipoDist == 'C'){       // CHEBYSHEV ------------------------------------------------------------------------
       for (int j = 0; j < linhaTeste; j++){
         for (int k = 0; k < linhaTreino; k++){
           float maior = 0;
@@ -247,7 +253,7 @@ printf("Nrotulos: %d\n",(int)numrotulos );
         }
       }
 
-      float respRotulos[linhaTeste];
+      float respRotulos[linhaTeste];      // ORGANIZA VETOR ----------------------------------
       for (int i = 0; i < linhaTeste; i++) {
         int counts[10] = {0};
 
@@ -258,7 +264,12 @@ printf("Nrotulos: %d\n",(int)numrotulos );
         respRotulos[i] = maior(counts,10);
        // printf("Rot Chibi : %d\n", (int)respRotulos[i] - 1);
       }
-      float cont = 0;
+
+      for(int j = 0; j < linhaTeste;j++){ // ARMAZENA MATRIZ -------------------------------
+        // printf("A:%d  B:%d\n",(int)respRotulos[j],(int)rotulosTeste[j] );
+       matrizConfusao[(int)respRotulos[j] - 1][(int)rotulosTeste[j] - 1]++;
+      }
+      float cont = 0;             // ACURÁCIA -----------------------------------------
       float accuracy;
       for(int i = 0;i < linhaTeste; i++){
         if(respRotulos[i] == rotulosTeste[i]){
@@ -266,21 +277,24 @@ printf("Nrotulos: %d\n",(int)numrotulos );
         }
       }
       accuracy=cont/linhaTeste;
-      printf("%.2f\n",accuracy);
-      printf("\n");
+      char arquivoNome[200];
+      sprintf(arquivoNome, "resultados_%d.txt", contador);
+      FILE *arquivo = fopen(arquivoNome, "w");
+      fprintf(arquivo,"%.2f\n\n",accuracy);         // PRINTFS --------------------------------------------
       for(int i= 0 ;i<(int)numrotulos;i++){
         for(int j=0; j<(int)numrotulos;j++){
-          printf("%d ",matrizConfusao[i][j]);
+          fprintf(arquivo,"%d ",matrizConfusao[i][j]);
         }
-        printf("\n" );
+        fprintf(arquivo,"\n");
       }
-      printf("\n");
+      fprintf(arquivo,"\n");
       for (int i = 0; i < linhaTeste; i++){
-        printf("Rot Cheby : %d\n", (int)respRotulos[i] - 1);
+        fprintf(arquivo,"%d\n", (int)respRotulos[i] - 1);
       }
+      fclose(arquivo);
     }
 
-    if (tipoDist == 'E'){
+    if (tipoDist == 'E'){           // EUCLIDIANA --------------------------------------------
 
       for (int j = 0; j < linhaTeste; j++){
       for (int k = 0; k < linhaTreino; k++){
@@ -295,7 +309,7 @@ printf("Nrotulos: %d\n",(int)numrotulos );
           distancia = 0;
         }
       }
-      float respRotulos[linhaTeste];
+      float respRotulos[linhaTeste];          // ORGANIZA VETOR ----------------------------
       for (int i = 0; i < linhaTeste; i++) {
         int counts[10] = {0};
 
@@ -306,7 +320,11 @@ printf("Nrotulos: %d\n",(int)numrotulos );
         respRotulos[i] = maior(counts,10);
        // printf("Rot Eucli : %d\n", (int)respRotulos[i] - 1);
       }
-      float cont = 0;
+      for(int j = 0; j < linhaTeste;j++){ // ARMAZENA MATRIZ -------------------------------
+        // printf("A:%d  B:%d\n",(int)respRotulos[j],(int)rotulosTeste[j] );
+       matrizConfusao[(int)respRotulos[j] - 1][(int)rotulosTeste[j] - 1]++;
+      }
+      float cont = 0;                         // ACURÁCIA -------------------------
       float accuracy;
       for(int i = 0;i < linhaTeste; i++){
         if(respRotulos[i] == rotulosTeste[i]){
@@ -314,30 +332,35 @@ printf("Nrotulos: %d\n",(int)numrotulos );
         }
       }
       accuracy=cont/linhaTeste;
-      printf("%.2f\n",accuracy);
-      printf("\n");
+      char arquivoNome[200];
+      sprintf(arquivoNome, "resultados_%d.txt", contador);
+      FILE *arquivo = fopen(arquivoNome, "w");
+      fprintf(arquivo,"%.2f\n\n",accuracy);         // PRINTFS --------------------------------------------
       for(int i= 0 ;i<(int)numrotulos;i++){
         for(int j=0; j<(int)numrotulos;j++){
-          printf("%d ",matrizConfusao[i][j]);
+          fprintf(arquivo,"%d ",matrizConfusao[i][j]);
         }
-        printf("\n" );
+        fprintf(arquivo,"\n");
       }
-      printf("\n");
+      fprintf(arquivo,"\n");
       for (int i = 0; i < linhaTeste; i++){
-        printf("Rot Euclidin : %d\n", (int)respRotulos[i] - 1);
+        fprintf(arquivo,"%d\n", (int)respRotulos[i] - 1);
       }
+      fclose(arquivo);
     }
+  }
 
   for (int i = 0; i < linhaTeste; i++) {
     free(vetorDist[i]);
   }
   free(vetorDist);
+
   for (int i = 0; i < (int)numrotulos; i++){
     free(matrizConfusao[i]);
   }
+
   free(matrizConfusao);
   return dados;
-  }
 }
 
 tCaminhos leCaminhos(FILE *f,char **caminhoTeste,char **caminhoTreino, char **caminhoPredicao){
